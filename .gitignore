@@ -1,0 +1,9 @@
+# never commit secrets
+.env
+.env.*
+*serviceAccount*.json
+*-adminsdk-*.json
+.firebase/
+.firebaserc.local
+node_modules/
+.DS_Store

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://firebasestorage.googleapis.com; connect-src 'self' https://www.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebasestorage.googleapis.com https://firebaseappcheck.googleapis.com; frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<title>AURA Admin</title>
+<link rel="icon" type="image/png" href="../assets/img/favicon.png">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<!-- Shown if firebase-config.js still has the PASTE_ placeholders -->
+<main class="center" id="notConfigured" hidden>
+  <div class="card narrow">
+    <h1>Firebase not configured</h1>
+    <p>Open <code>assets/js/firebase-config.js</code> and paste your Firebase web-app config, then reload this page.</p>
+  </div>
+</main>
+
+<!-- LOGIN -->
+<main class="center" id="loginView" hidden>
+  <div class="card narrow">
+    <img class="brand" src="../assets/img/logo-dark.png" alt="AURA Construction" width="520" height="304">
+    <h1>Admin sign in</h1>
+    <form id="loginForm" novalidate>
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="username" required maxlength="120">
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password" required maxlength="128">
+      <button class="btn primary block" id="loginBtn" type="submit">Sign in</button>
+      <p class="msg" id="loginMsg" role="alert"></p>
+    </form>
+    <p class="fine">Authorised staff only. All access is monitored.</p>
+  </div>
+</main>
+
+<!-- APP -->
+<div id="appView" hidden>
+  <header class="bar">
+    <img src="../assets/img/logo-light.png" alt="AURA Construction" width="520" height="304">
+    <div class="bar-right">
+      <span class="who" id="whoami"></span>
+      <button class="btn ghost" id="logoutBtn" type="button">Sign out</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="tabs" role="tablist">
+      <button class="tab active" id="tabBtnInq" role="tab" aria-selected="true" aria-controls="tabInquiries" type="button">Inquiries <span class="badge" id="newCount" hidden>0</span></button>
+      <button class="tab" id="tabBtnProj" role="tab" aria-selected="false" aria-controls="tabProjects" type="button">Projects</button>
+    </div>
+
+    <!-- INQUIRIES -->
+    <section id="tabInquiries" role="tabpanel">
+      <div class="row spread">
+        <h2>Customer inquiries</h2>
+        <div class="row">
+          <select id="inqFilter" aria-label="Filter inquiries">
+            <option value="all">All</option>
+            <option value="new">New only</option>
+            <option value="read">Read only</option>
+          </select>
+          <button class="btn ghost" id="inqRefresh" type="button">Refresh</button>
+        </div>
+      </div>
+      <div id="inqList" class="list"></div>
+      <p class="empty" id="inqEmpty" hidden>No inquiries to show.</p>
+    </section>
+
+    <!-- PROJECTS -->
+    <section id="tabProjects" role="tabpanel" hidden>
+      <h2 id="projFormTitle">Add a project</h2>
+      <form id="projForm" class="card" novalidate>
+        <div class="grid2">
+          <div>
+            <label for="pTitle">Title</label>
+            <input id="pTitle" type="text" required minlength="2" maxlength="100">
+          </div>
+          <div>
+            <label for="pCategory">Category</label>
+            <select id="pCategory" required>
+              <option>Residential</option>
+              <option>Commercial</option>
+              <option>Renovation</option>
+              <option>Exteriors</option>
+            </select>
+          </div>
+          <div>
+            <label for="pLocation">Location</label>
+            <input id="pLocation" type="text" maxlength="80" placeholder="e.g. Kandy">
+          </div>
+          <div>
+            <label for="pYear">Year completed</label>
+            <input id="pYear" type="text" maxlength="10" placeholder="e.g. 2025">
+          </div>
+          <div>
+            <label for="pOrder">Display order <small>(lower shows first)</small></label>
+            <input id="pOrder" type="number" min="0" max="9999" value="0">
+          </div>
+          <div>
+            <label for="pPhoto">Photo <small>(JPG, PNG or WebP)</small></label>
+            <input id="pPhoto" type="file" accept="image/jpeg,image/png,image/webp">
+          </div>
+        </div>
+        <div class="row">
+          <button class="btn primary" id="projSave" type="submit">Save project</button>
+          <button class="btn ghost" id="projCancel" type="button" hidden>Cancel edit</button>
+        </div>
+        <p class="fine">Photos are resized to 1600&nbsp;px and re-encoded as JPEG before upload. This also removes hidden location data (EXIF) from site photos.</p>
+      </form>
+
+      <h2>Published projects</h2>
+      <div id="projList" class="list"></div>
+      <p class="empty" id="projEmpty" hidden>No projects yet — the public site is showing its placeholder cards.</p>
+    </section>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script type="module" src="admin.js"></script>
+</body>
+</html>

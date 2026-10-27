@@ -1,0 +1,100 @@
+rules_version = '2';
+
+// =====================================================================
+// AURA Construction — Firestore security rules
+//
+// Model:  deny everything by default, then open the minimum.
+//   • Visitors  : may READ projects, may CREATE one inquiry (validated).
+//   • Admin     : signed-in user whose UID is in /admins/{uid}.
+//                 (The admins collection is writable only from the
+//                 Firebase console / Admin SDK — never from the client.)
+// =====================================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Admin = signed in AND listed in /admins/{uid}
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isShortString(v, minLen, maxLen) {
+      return v is string && v.size() >= minLen && v.size() <= maxLen;
+    }
+
+    // Only digits, spaces, +, -, ( ) — 7 to 20 chars
+    function isValidPhone(v) {
+      return v is string
+        && v.size() >= 7 && v.size() <= 20
+        && v.matches('^[0-9+\\-() ]+$');
+    }
+
+    function isValidOptionalEmail(v) {
+      return v == ''
+        || (v is string && v.size() <= 120
+            && v.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$'));
+    }
+
+    // ---------- inquiries ----------
+    match /inquiries/{id} {
+      // Anyone may submit — but only with exactly these fields, valid and
+      // bounded, status forced to 'new', and a server-set timestamp.
+      allow create: if
+        request.resource.data.keys().hasOnly(
+          ['name','phone','email','service','message','status','createdAt','hp'])
+        && request.resource.data.keys().hasAll(
+          ['name','phone','service','message','status','createdAt'])
+        && isShortString(request.resource.data.name, 2, 80)
+        && isValidPhone(request.resource.data.phone)
+        && isValidOptionalEmail(request.resource.data.get('email', ''))
+        && isShortString(request.resource.data.service, 2, 60)
+        && isShortString(request.resource.data.message, 5, 1500)
+        && request.resource.data.status == 'new'
+        && request.resource.data.createdAt == request.time
+        // honeypot field must be empty if present (bots fill it in)
+        && request.resource.data.get('hp', '') == '';
+
+      // Only the admin can read / mark-as-read / delete inquiries.
+      allow read, delete: if isAdmin();
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status in ['new', 'read'];
+    }
+
+    // ---------- projects ----------
+    match /projects/{id} {
+      allow read: if true;   // public portfolio
+
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(
+          ['title','category','location','year','photoUrl','photoPath','sortOrder','createdAt'])
+        && isShortString(request.resource.data.title, 2, 100)
+        && request.resource.data.category in ['Residential','Commercial','Renovation','Exteriors']
+        && isShortString(request.resource.data.get('location',''), 0, 80)
+        && isShortString(request.resource.data.get('year',''), 0, 10)
+        && request.resource.data.get('photoUrl','') is string
+        && request.resource.data.get('photoUrl','').size() <= 700
+        && request.resource.data.sortOrder is number;
+
+      allow delete: if isAdmin();
+    }
+
+    // ---------- admins ----------
+    // A signed-in user may check whether THEY are an admin (used by the
+    // admin panel to gate its UI). Nobody can write from the client.
+    match /admins/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // ---------- everything else ----------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
